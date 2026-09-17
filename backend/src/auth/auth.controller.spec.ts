@@ -64,7 +64,7 @@ describe('AuthController', () => {
   });
 
   describe('GET /auth/me', () => {
-    it('AuthService.getMe에 userId를 전달한다', async () => {
+    it('AuthService.getMe에 userId를 전달', async () => {
       const user = { userId: 'user-1', email: 'user@example.com' };
       const me = {
         id: 'user-1',
