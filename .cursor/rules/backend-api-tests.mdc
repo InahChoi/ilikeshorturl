@@ -1,0 +1,42 @@
+---
+description: API 작성 시 테스트 등록·검열 및 // * 주석 규칙
+alwaysApply: true
+---
+
+# Backend API Agent Rules
+
+## Comments
+
+- 코드 주석은 반드시 `// *` 형식으로 작성한다.
+- 설명형 주석만 사용하고, 변경 이력/잡담 주석은 쓰지 않는다.
+
+```typescript
+// * POST /users/signup 요청이 들어오면 회원가입 처리
+```
+
+## When Adding or Changing an API
+
+API(Controller 엔드포인트 / Service public 메서드)를 추가·수정하면 **같은 작업에서** 테스트를 함께 작성하고 실행한다.
+
+### Required tests
+
+1. **Unit test** (`*.spec.ts`)
+   - Controller: 서비스 호출·인자 전달 검증
+   - Service: 성공 / 비즈니스 예외(409, 401 등) 검증
+2. **E2E test** (`test/*.e2e-spec.ts`)
+   - HTTP method + path + status code
+   - 성공 body / 실패 body(통일된 에러 형식) 검증
+
+### Checklist before finishing
+
+- [ ] 새/변경 API마다 unit + e2e 케이스 존재
+- [ ] `npm test` 통과
+- [ ] 관련 e2e가 있으면 `npm run test:e2e` 통과
+- [ ] 주석이 `// *` 형식
+- [ ] passwordHash 등 민감 정보가 응답/스냅샷에 노출되지 않음
+
+### Test style
+
+- Prisma / 외부 의존성은 mock 한다 (로컬 DB에 의존하지 않음).
+- e2e는 `ValidationPipe`와 실제 라우팅을 켠다.
+- 테스트 파일에도 필요한 설명 주석은 `// *` 로 작성한다.

@@ -1,0 +1,20 @@
+// * NestJS에서 Module을 만들기 위한 기능
+import { Module } from '@nestjs/common';
+
+// * FAQ 관련 Controller
+import { FaqsController } from './faqs.controller';
+
+// * FAQ를 처리하는 Service
+import { FaqsService } from './faqs.service';
+
+@Module({
+  // * FaqsController를 FaqsModule에서 사용할 수 있도록 등록
+  controllers: [FaqsController],
+
+  // * FaqsService를 FaqsModule에서 사용할 수 있도록 등록
+  providers: [FaqsService],
+
+  // * 다른 Module에서도 FaqsService를 사용할 수 있도록 공개
+  exports: [FaqsService],
+})
+export class FaqsModule {}

@@ -54,3 +54,13 @@ export type ShortUrl = Prisma.ShortUrlModel
  * 
  */
 export type Click = Prisma.ClickModel
+/**
+ * Model Term
+ * 
+ */
+export type Term = Prisma.TermModel
+/**
+ * Model Faq
+ * 
+ */
+export type Faq = Prisma.FaqModel

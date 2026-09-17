@@ -1,0 +1,40 @@
+---
+description: NestJS backend TypeScript 주석과 테스트 패턴
+globs: backend/**/*.ts
+alwaysApply: false
+---
+
+# NestJS Backend Conventions
+
+## Comments
+
+```typescript
+// ✅ GOOD
+// * 이메일로 사용자 조회 (로그인 시 passwordHash 비교용)
+
+// ❌ BAD
+// fetch user by email
+/* temporary fix */
+```
+
+## API + Tests together
+
+Controller에 엔드포인트를 추가하면:
+
+1. `*.controller.spec.ts`에 HTTP 핸들러 테스트 추가
+2. `*.service.spec.ts`에 비즈니스 로직 테스트 추가
+3. `test/*.e2e-spec.ts`에 status/body 검증 추가
+4. `npm test` / 필요 시 `npm run test:e2e`로 검열
+
+## Mocking
+
+```typescript
+// * PrismaService mock
+const prisma = {
+  user: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    findMany: jest.fn(),
+  },
+};
+```
