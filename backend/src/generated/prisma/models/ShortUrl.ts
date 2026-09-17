@@ -211,7 +211,7 @@ export type ShortUrlGroupByArgs<ExtArgs extends runtime.Types.Extensions.Interna
 
 export type ShortUrlGroupByOutputType = {
   id: string
-  userId: string
+  userId: string | null
   shortCode: string
   originalUrl: string
   title: string | null
@@ -247,7 +247,7 @@ export type ShortUrlWhereInput = {
   OR?: Prisma.ShortUrlWhereInput[]
   NOT?: Prisma.ShortUrlWhereInput | Prisma.ShortUrlWhereInput[]
   id?: Prisma.UuidFilter<"ShortUrl"> | string
-  userId?: Prisma.UuidFilter<"ShortUrl"> | string
+  userId?: Prisma.UuidNullableFilter<"ShortUrl"> | string | null
   shortCode?: Prisma.StringFilter<"ShortUrl"> | string
   originalUrl?: Prisma.StringFilter<"ShortUrl"> | string
   title?: Prisma.StringNullableFilter<"ShortUrl"> | string | null
@@ -256,13 +256,13 @@ export type ShortUrlWhereInput = {
   clickCount?: Prisma.BigIntFilter<"ShortUrl"> | bigint | number
   createdAt?: Prisma.DateTimeFilter<"ShortUrl"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ShortUrl"> | Date | string
-  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   clicks?: Prisma.ClickListRelationFilter
 }
 
 export type ShortUrlOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  userId?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   shortCode?: Prisma.SortOrder
   originalUrl?: Prisma.SortOrder
   title?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -281,7 +281,7 @@ export type ShortUrlWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.ShortUrlWhereInput | Prisma.ShortUrlWhereInput[]
   OR?: Prisma.ShortUrlWhereInput[]
   NOT?: Prisma.ShortUrlWhereInput | Prisma.ShortUrlWhereInput[]
-  userId?: Prisma.UuidFilter<"ShortUrl"> | string
+  userId?: Prisma.UuidNullableFilter<"ShortUrl"> | string | null
   originalUrl?: Prisma.StringFilter<"ShortUrl"> | string
   title?: Prisma.StringNullableFilter<"ShortUrl"> | string | null
   expiresAt?: Prisma.DateTimeNullableFilter<"ShortUrl"> | Date | string | null
@@ -289,13 +289,13 @@ export type ShortUrlWhereUniqueInput = Prisma.AtLeast<{
   clickCount?: Prisma.BigIntFilter<"ShortUrl"> | bigint | number
   createdAt?: Prisma.DateTimeFilter<"ShortUrl"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ShortUrl"> | Date | string
-  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   clicks?: Prisma.ClickListRelationFilter
 }, "id" | "shortCode">
 
 export type ShortUrlOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  userId?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   shortCode?: Prisma.SortOrder
   originalUrl?: Prisma.SortOrder
   title?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -316,7 +316,7 @@ export type ShortUrlScalarWhereWithAggregatesInput = {
   OR?: Prisma.ShortUrlScalarWhereWithAggregatesInput[]
   NOT?: Prisma.ShortUrlScalarWhereWithAggregatesInput | Prisma.ShortUrlScalarWhereWithAggregatesInput[]
   id?: Prisma.UuidWithAggregatesFilter<"ShortUrl"> | string
-  userId?: Prisma.UuidWithAggregatesFilter<"ShortUrl"> | string
+  userId?: Prisma.UuidNullableWithAggregatesFilter<"ShortUrl"> | string | null
   shortCode?: Prisma.StringWithAggregatesFilter<"ShortUrl"> | string
   originalUrl?: Prisma.StringWithAggregatesFilter<"ShortUrl"> | string
   title?: Prisma.StringNullableWithAggregatesFilter<"ShortUrl"> | string | null
@@ -337,13 +337,13 @@ export type ShortUrlCreateInput = {
   clickCount?: bigint | number
   createdAt?: Date | string
   updatedAt?: Date | string
-  user: Prisma.UserCreateNestedOneWithoutShortUrlsInput
+  user?: Prisma.UserCreateNestedOneWithoutShortUrlsInput
   clicks?: Prisma.ClickCreateNestedManyWithoutShortUrlInput
 }
 
 export type ShortUrlUncheckedCreateInput = {
   id?: string
-  userId: string
+  userId?: string | null
   shortCode: string
   originalUrl: string
   title?: string | null
@@ -365,13 +365,13 @@ export type ShortUrlUpdateInput = {
   clickCount?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  user?: Prisma.UserUpdateOneRequiredWithoutShortUrlsNestedInput
+  user?: Prisma.UserUpdateOneWithoutShortUrlsNestedInput
   clicks?: Prisma.ClickUpdateManyWithoutShortUrlNestedInput
 }
 
 export type ShortUrlUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shortCode?: Prisma.StringFieldUpdateOperationsInput | string
   originalUrl?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -385,7 +385,7 @@ export type ShortUrlUncheckedUpdateInput = {
 
 export type ShortUrlCreateManyInput = {
   id?: string
-  userId: string
+  userId?: string | null
   shortCode: string
   originalUrl: string
   title?: string | null
@@ -410,7 +410,7 @@ export type ShortUrlUpdateManyMutationInput = {
 
 export type ShortUrlUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shortCode?: Prisma.StringFieldUpdateOperationsInput | string
   originalUrl?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -616,7 +616,7 @@ export type ShortUrlScalarWhereInput = {
   OR?: Prisma.ShortUrlScalarWhereInput[]
   NOT?: Prisma.ShortUrlScalarWhereInput | Prisma.ShortUrlScalarWhereInput[]
   id?: Prisma.UuidFilter<"ShortUrl"> | string
-  userId?: Prisma.UuidFilter<"ShortUrl"> | string
+  userId?: Prisma.UuidNullableFilter<"ShortUrl"> | string | null
   shortCode?: Prisma.StringFilter<"ShortUrl"> | string
   originalUrl?: Prisma.StringFilter<"ShortUrl"> | string
   title?: Prisma.StringNullableFilter<"ShortUrl"> | string | null
@@ -637,12 +637,12 @@ export type ShortUrlCreateWithoutClicksInput = {
   clickCount?: bigint | number
   createdAt?: Date | string
   updatedAt?: Date | string
-  user: Prisma.UserCreateNestedOneWithoutShortUrlsInput
+  user?: Prisma.UserCreateNestedOneWithoutShortUrlsInput
 }
 
 export type ShortUrlUncheckedCreateWithoutClicksInput = {
   id?: string
-  userId: string
+  userId?: string | null
   shortCode: string
   originalUrl: string
   title?: string | null
@@ -679,12 +679,12 @@ export type ShortUrlUpdateWithoutClicksInput = {
   clickCount?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  user?: Prisma.UserUpdateOneRequiredWithoutShortUrlsNestedInput
+  user?: Prisma.UserUpdateOneWithoutShortUrlsNestedInput
 }
 
 export type ShortUrlUncheckedUpdateWithoutClicksInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shortCode?: Prisma.StringFieldUpdateOperationsInput | string
   originalUrl?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -787,7 +787,7 @@ export type ShortUrlSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   clickCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.ShortUrl$userArgs<ExtArgs>
   clicks?: boolean | Prisma.ShortUrl$clicksArgs<ExtArgs>
   _count?: boolean | Prisma.ShortUrlCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["shortUrl"]>
@@ -803,7 +803,7 @@ export type ShortUrlSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   clickCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.ShortUrl$userArgs<ExtArgs>
 }, ExtArgs["result"]["shortUrl"]>
 
 export type ShortUrlSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -817,7 +817,7 @@ export type ShortUrlSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   clickCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.ShortUrl$userArgs<ExtArgs>
 }, ExtArgs["result"]["shortUrl"]>
 
 export type ShortUrlSelectScalar = {
@@ -835,26 +835,26 @@ export type ShortUrlSelectScalar = {
 
 export type ShortUrlOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "shortCode" | "originalUrl" | "title" | "expiresAt" | "isActive" | "clickCount" | "createdAt" | "updatedAt", ExtArgs["result"]["shortUrl"]>
 export type ShortUrlInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.ShortUrl$userArgs<ExtArgs>
   clicks?: boolean | Prisma.ShortUrl$clicksArgs<ExtArgs>
   _count?: boolean | Prisma.ShortUrlCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ShortUrlIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.ShortUrl$userArgs<ExtArgs>
 }
 export type ShortUrlIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.ShortUrl$userArgs<ExtArgs>
 }
 
 export type $ShortUrlPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ShortUrl"
   objects: {
-    user: Prisma.$UserPayload<ExtArgs>
+    user: Prisma.$UserPayload<ExtArgs> | null
     clicks: Prisma.$ClickPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    userId: string
+    userId: string | null
     shortCode: string
     originalUrl: string
     title: string | null
@@ -1257,7 +1257,7 @@ readonly fields: ShortUrlFieldRefs;
  */
 export interface Prisma__ShortUrlClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  user<T extends Prisma.ShortUrl$userArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ShortUrl$userArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   clicks<T extends Prisma.ShortUrl$clicksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ShortUrl$clicksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ClickPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1696,6 +1696,25 @@ export type ShortUrlDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * Limit how many ShortUrls to delete.
    */
   limit?: number
+}
+
+/**
+ * ShortUrl.user
+ */
+export type ShortUrl$userArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
 }
 
 /**

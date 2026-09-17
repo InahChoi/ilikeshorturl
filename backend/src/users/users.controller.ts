@@ -1,5 +1,8 @@
 // * HTTP 요청을 처리하는 Controller 기능
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
+
+// * 회원가입 요청 body 형식
+import { CreateUserDto } from './dto/create-user.dto';
 
 // * 사용자 관련 DB 작업을 담당하는 Service
 import { UsersService } from './users.service';
@@ -15,5 +18,11 @@ export class UsersController {
   async findAll() {
     // * GET /users 요청이 들어오면 모든 사용자를 조회
     return this.usersService.findAll();
+  }
+
+  @Post('signup')
+  async signup(@Body() createUserDto: CreateUserDto) {
+    // * POST /users/signup 요청이 들어오면 회원가입 처리
+    return this.usersService.signup(createUserDto);
   }
 }

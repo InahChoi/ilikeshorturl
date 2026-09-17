@@ -11,4 +11,6 @@
 export type * from './models/User.js'
 export type * from './models/ShortUrl.js'
 export type * from './models/Click.js'
+export type * from './models/Term.js'
+export type * from './models/Faq.js'
 export type * from './commonInputTypes.js'

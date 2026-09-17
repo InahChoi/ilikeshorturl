@@ -9,7 +9,9 @@
 * 🟢 You can import this file directly.
 */
 
+export const TermType = {
+  TERMS_OF_SERVICE: 'TERMS_OF_SERVICE',
+  PRIVACY_POLICY: 'PRIVACY_POLICY'
+} as const
 
-
-// This file is empty because there are no enums in the schema.
-export {}
+export type TermType = (typeof TermType)[keyof typeof TermType]
