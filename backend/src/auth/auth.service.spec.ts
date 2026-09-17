@@ -65,7 +65,7 @@ describe('AuthService', () => {
       passwordHash: 'hashed-password',
     };
 
-    it('로그인에 성공하면 accessToken과 user를 반환한다', async () => {
+    it('로그인에 성공하면 accessToken과 user를 반환', async () => {
       usersService.findByEmail.mockResolvedValue(storedUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       jwtService.signAsync.mockResolvedValue('test-access-token');
@@ -90,7 +90,7 @@ describe('AuthService', () => {
       });
     });
 
-    it('사용자가 없으면 UnauthorizedException을 던진다', async () => {
+    it('사용자가 없으면 UnauthorizedException을 던짐', async () => {
       usersService.findByEmail.mockResolvedValue(null);
 
       await expect(service.login(loginDto)).rejects.toBeInstanceOf(
@@ -99,7 +99,7 @@ describe('AuthService', () => {
       expect(jwtService.signAsync).not.toHaveBeenCalled();
     });
 
-    it('비밀번호가 틀리면 UnauthorizedException을 던진다', async () => {
+    it('비밀번호가 틀리면 UnauthorizedException을 던짐', async () => {
       usersService.findByEmail.mockResolvedValue(storedUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
@@ -119,14 +119,14 @@ describe('AuthService', () => {
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     };
 
-    it('현재 사용자 정보를 반환한다', async () => {
+    it('현재 사용자 정보를 반환', async () => {
       usersService.findById.mockResolvedValue(meUser);
 
       await expect(service.getMe('user-1')).resolves.toEqual(meUser);
       expect(usersService.findById).toHaveBeenCalledWith('user-1');
     });
 
-    it('사용자가 없으면 UnauthorizedException을 던진다', async () => {
+    it('사용자가 없으면 UnauthorizedException을 던짐', async () => {
       usersService.findById.mockResolvedValue(null);
 
       await expect(service.getMe('user-1')).rejects.toBeInstanceOf(
