@@ -1,5 +1,5 @@
 // * NestJS에서 Service를 만들기 위한 기능
-import { GoneException, NotFoundException, Injectable } from '@nestjs/common';
+import { GoneException, Injectable, NotFoundException } from '@nestjs/common';
 
 // * ConfigService로 APP_BASE_URL에 접근
 import { ConfigService } from '@nestjs/config';
@@ -22,6 +22,9 @@ import { CreateShortUrlDto } from './dto/create-short-url.dto';
 // * 클릭 메타데이터 형식
 import { ClickMeta } from './interfaces/click-meta.interface';
 
+// * 대시보드 목록 응답 형식
+import { ShortUrlListItem } from './interfaces/short-url-list-item.interface';
+
 // * shortCode 생성 유틸
 import { generateShortCode } from './utils/generate-short-code.util';
 
@@ -41,12 +44,15 @@ export class ShortUrlsService {
     private readonly urlSafetyService: UrlSafetyService,
   ) {}
 
-  // * 로그인 없이 단축 URL 생성 (userId = null)
-  async create(createShortUrlDto: CreateShortUrlDto) {
+  // * 단축 URL 생성 (로그인 시 userId 연결, 비로그인이면 null)
+  async create(createShortUrlDto: CreateShortUrlDto, userId?: string) {
     // * 악성/사설/신규 도메인 등 위험 URL은 생성 전에 차단
     await this.urlSafetyService.assertSafeUrl(createShortUrlDto.originalUrl);
 
-    const shortUrl = await this.createWithUniqueShortCode(createShortUrlDto);
+    const shortUrl = await this.createWithUniqueShortCode(
+      createShortUrlDto,
+      userId,
+    );
 
     // * 응답에 바로 쓸 수 있는 단축 주소 포함
     return {
@@ -57,6 +63,39 @@ export class ShortUrlsService {
       title: shortUrl.title,
       createdAt: shortUrl.createdAt,
     };
+  }
+
+  // * 로그인한 사용자의 단축 URL 목록 조회 (대시보드용)
+  async findAllByUserId(userId: string): Promise<ShortUrlListItem[]> {
+    const shortUrls = await this.prisma.shortUrl.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        shortCode: true,
+        originalUrl: true,
+        title: true,
+        isActive: true,
+        expiresAt: true,
+        clickCount: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    // * BigInt clickCount를 JSON 친화적인 string으로 변환하고 shortUrl 포함
+    return shortUrls.map((shortUrl) => ({
+      id: shortUrl.id,
+      shortCode: shortUrl.shortCode,
+      shortUrl: this.buildShortUrl(shortUrl.shortCode),
+      originalUrl: shortUrl.originalUrl,
+      title: shortUrl.title,
+      isActive: shortUrl.isActive,
+      expiresAt: shortUrl.expiresAt,
+      clickCount: shortUrl.clickCount.toString(),
+      createdAt: shortUrl.createdAt,
+      updatedAt: shortUrl.updatedAt,
+    }));
   }
 
   // * shortCode로 원본 URL을 찾고 클릭을 기록한 뒤 리다이렉트 대상 URL을 반환
@@ -100,17 +139,19 @@ export class ShortUrlsService {
   // * shortCode 충돌이 나면 재생성하여 저장
   private async createWithUniqueShortCode(
     createShortUrlDto: CreateShortUrlDto,
+    userId?: string,
   ) {
     for (let attempt = 0; attempt < SHORT_CODE_MAX_RETRIES; attempt += 1) {
       const shortCode = generateShortCode();
 
       try {
-        // * 비로그인 생성: userId를 넣지 않음 (나중에 로그인 시 userId 연결 가능)
+        // * 로그인 사용자는 userId를 연결하고, 비로그인이면 null
         return await this.prisma.shortUrl.create({
           data: {
             shortCode,
             originalUrl: createShortUrlDto.originalUrl,
             title: createShortUrlDto.title,
+            ...(userId ? { userId } : {}),
           },
           select: {
             id: true,

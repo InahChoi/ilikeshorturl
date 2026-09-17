@@ -1,6 +1,9 @@
 // * NestJS에서 Module을 만들기 위한 기능
 import { Module } from '@nestjs/common';
 
+// * JWT 인증을 ShortUrls API에서 사용
+import { AuthModule } from '../auth/auth.module';
+
 // * URL 안전 검사 모듈
 import { UrlSafetyModule } from '../url-safety/url-safety.module';
 
@@ -14,8 +17,8 @@ import { ShortUrlsController } from './short-urls.controller';
 import { ShortUrlsService } from './short-urls.service';
 
 @Module({
-  // * UrlSafetyService를 ShortUrlsService에서 사용
-  imports: [UrlSafetyModule],
+  // * UrlSafetyService / JWT Guard를 ShortUrls에서 사용
+  imports: [UrlSafetyModule, AuthModule],
 
   // * ShortUrlsController / RedirectController 등록
   controllers: [ShortUrlsController, RedirectController],

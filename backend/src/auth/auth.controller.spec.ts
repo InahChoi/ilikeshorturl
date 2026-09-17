@@ -1,6 +1,9 @@
 // * NestJS 테스트 모듈 기능
 import { Test, TestingModule } from '@nestjs/testing';
 
+// * JWT Guard mock 교체용
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+
 // * 테스트 대상 Controller
 import { AuthController } from './auth.controller';
 
@@ -13,6 +16,7 @@ describe('AuthController', () => {
   // * AuthService mock
   const authService = {
     login: jest.fn(),
+    getMe: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -24,7 +28,11 @@ describe('AuthController', () => {
           useValue: authService,
         },
       ],
-    }).compile();
+    })
+      // * Guard는 단위 테스트에서 실제 JWT 검증을 하지 않음
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<AuthController>(AuthController);
     jest.clearAllMocks();
@@ -35,7 +43,7 @@ describe('AuthController', () => {
   });
 
   describe('POST /auth/login', () => {
-    it('AuthService.login에 DTO를 전달한다', async () => {
+    it('AuthService.login에 DTO를 전달', async () => {
       const loginDto = {
         email: 'user@example.com',
         password: 'password123',
@@ -52,6 +60,23 @@ describe('AuthController', () => {
 
       await expect(controller.login(loginDto)).resolves.toEqual(loginResult);
       expect(authService.login).toHaveBeenCalledWith(loginDto);
+    });
+  });
+
+  describe('GET /auth/me', () => {
+    it('AuthService.getMe에 userId를 전달한다', async () => {
+      const user = { userId: 'user-1', email: 'user@example.com' };
+      const me = {
+        id: 'user-1',
+        email: 'user@example.com',
+        name: '홍길동',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+      authService.getMe.mockResolvedValue(me);
+
+      await expect(controller.getMe(user)).resolves.toEqual(me);
+      expect(authService.getMe).toHaveBeenCalledWith('user-1');
     });
   });
 });

@@ -30,6 +30,8 @@ API(Controller 엔드포인트 / Service public 메서드)를 추가·수정하�
 ### Checklist before finishing
 
 - [ ] 새/변경 API마다 unit + e2e 케이스 존재
+- [ ] `npm run typecheck` 통과
+- [ ] `npm run lint` 통과
 - [ ] `npm test` 통과
 - [ ] 관련 e2e가 있으면 `npm run test:e2e` 통과
 - [ ] 주석이 `// *` 형식
@@ -40,3 +42,34 @@ API(Controller 엔드포인트 / Service public 메서드)를 추가·수정하�
 - Prisma / 외부 의존성은 mock 한다 (로컬 DB에 의존하지 않음).
 - e2e는 `ValidationPipe`와 실제 라우팅을 켠다.
 - 테스트 파일에도 필요한 설명 주석은 `// *` 로 작성한다.
+
+### `it()` / `describe()` 문체
+
+한국어로 작성한다. e2e와 unit의 문체를 구분한다.
+
+**E2E** (`test/*.e2e-spec.ts`) — 문장 끝에 반드시 `테스트`를 붙인다.
+
+- 성공: `{대상/동작} 반환 테스트` 또는 `{동작} 테스트`
+- 실패/조건부: `{조건}일 경우 {status} 반환 테스트` 또는 `{조건} 시 {status} 반환 테스트`
+- `~한다` / `~하면` / `요청하면` 형태는 쓰지 않는다.
+
+```typescript
+// ✅ GOOD
+it('로그인 성공 시 accessToken과 user 반환 테스트', ...);
+it('비밀번호가 틀릴 경우 401 반환 테스트', ...);
+it('토큰 없이 요청 시 401 반환 테스트', ...);
+it('현재 로그인 사용자 정보 반환 테스트', ...);
+
+// ❌ BAD
+it('로그인에 성공하면 accessToken과 user를 반환한다', ...);
+it('토큰 없이 요청하면 401을 반환한다', ...);
+```
+
+**Unit** (`*.spec.ts`) — `테스트` 접미어 없이 `~한다` / `~던진다` 서술형.
+
+```typescript
+// ✅ GOOD
+it('AuthService.getMe에 userId를 전달한다', ...);
+it('사용자가 없으면 UnauthorizedException을 던진다', ...);
+it('현재 사용자 정보를 반환한다', ...);
+```

@@ -13,7 +13,7 @@ export class FaqsService {
 
   // * 활성화된 FAQ 목록 조회 (sortOrder 오름차순)
   async findAll(category?: string) {
-    return this.prisma.faq.findMany({
+    return await this.prisma.faq.findMany({
       where: {
         isActive: true,
         ...(category ? { category } : {}),

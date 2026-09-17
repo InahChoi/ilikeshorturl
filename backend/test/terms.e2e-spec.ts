@@ -62,7 +62,7 @@ describe('Terms API (e2e)', () => {
   });
 
   describe('GET /terms', () => {
-    it('활성 약관 목록을 반환한다', async () => {
+    it('활성 약관 목록 반환 테스트', async () => {
       const terms = [
         {
           id: 'term-1',
@@ -85,7 +85,7 @@ describe('Terms API (e2e)', () => {
   });
 
   describe('GET /terms/:type', () => {
-    it('타입별 최신 약관을 반환한다', async () => {
+    it('타입별 최신 약관 반환 테스트', async () => {
       const term = {
         id: 'term-2',
         type: 'PRIVACY_POLICY',
@@ -104,7 +104,7 @@ describe('Terms API (e2e)', () => {
       expect(response.body).toEqual(term);
     });
 
-    it('잘못된 type이면 400을 반환한다', async () => {
+    it('잘못된 type일 경우 400 반환 테스트', async () => {
       const response = await request(app.getHttpServer())
         .get('/terms/INVALID')
         .expect(400);
@@ -112,7 +112,7 @@ describe('Terms API (e2e)', () => {
       expect(response.body.statusCode).toBe(400);
     });
 
-    it('약관이 없으면 404를 반환한다', async () => {
+    it('약관이 없을 경우 404 반환 테스트', async () => {
       prisma.term.findFirst.mockResolvedValue(null);
 
       const response = await request(app.getHttpServer())

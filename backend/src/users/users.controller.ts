@@ -17,12 +17,12 @@ export class UsersController {
   @Get()
   async findAll() {
     // * GET /users 요청이 들어오면 모든 사용자를 조회
-    return this.usersService.findAll();
+    return await this.usersService.findAll();
   }
 
   @Post('signup')
   async signup(@Body() createUserDto: CreateUserDto) {
     // * POST /users/signup 요청이 들어오면 회원가입 처리
-    return this.usersService.signup(createUserDto);
+    return await this.usersService.signup(createUserDto);
   }
 }

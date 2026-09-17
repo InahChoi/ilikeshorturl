@@ -2,6 +2,7 @@
 import {
   BadRequestException,
   INestApplication,
+  UnauthorizedException,
   ValidationPipe,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -22,6 +23,10 @@ import { PrismaService } from '../src/prisma/prisma.service';
 // * URL 안전 검사를 mock으로 교체 (외부 API 호출 방지)
 import { UrlSafetyService } from '../src/url-safety/url-safety.service';
 
+// * JWT Guard mock 교체용
+import { JwtAuthGuard } from '../src/auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../src/auth/guards/optional-jwt-auth.guard';
+
 describe('ShortUrls API (e2e)', () => {
   let app: INestApplication<App>;
 
@@ -35,6 +40,7 @@ describe('ShortUrls API (e2e)', () => {
     shortUrl: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       update: jest.fn(),
     },
     click: {
@@ -57,6 +63,27 @@ describe('ShortUrls API (e2e)', () => {
       .useValue(prisma)
       .overrideProvider(UrlSafetyService)
       .useValue(urlSafetyService)
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
+        canActivate: (context: {
+          switchToHttp: () => {
+            getRequest: () => {
+              headers: { authorization?: string };
+              user?: { userId: string; email: string };
+            };
+          };
+        }) => {
+          const request = context.switchToHttp().getRequest();
+          // * Authorization 헤더가 없으면 실제 JWT Guard처럼 401
+          if (!request.headers.authorization) {
+            throw new UnauthorizedException();
+          }
+          request.user = { userId: 'user-1', email: 'user@example.com' };
+          return true;
+        },
+      })
+      .overrideGuard(OptionalJwtAuthGuard)
+      .useValue({ canActivate: () => true })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -93,7 +120,7 @@ describe('ShortUrls API (e2e)', () => {
       title: '예제',
     };
 
-    it('로그인 없이 단축 URL을 생성한다', async () => {
+    it('비로그인 단축 URL 생성 테스트', async () => {
       prisma.shortUrl.create.mockImplementation(
         ({
           data,
@@ -135,7 +162,7 @@ describe('ShortUrls API (e2e)', () => {
       );
     });
 
-    it('잘못된 URL이면 400을 반환한다', async () => {
+    it('잘못된 URL일 경우 400 반환 테스트', async () => {
       const response = await request(app.getHttpServer())
         .post('/short-urls')
         .send({
@@ -147,7 +174,7 @@ describe('ShortUrls API (e2e)', () => {
       expect(prisma.shortUrl.create).not.toHaveBeenCalled();
     });
 
-    it('안전 검사 실패 시 400을 반환한다', async () => {
+    it('안전 검사 실패 시 400 반환 테스트', async () => {
       urlSafetyService.assertSafeUrl.mockRejectedValue(
         new BadRequestException(
           '로컬 또는 사설 네트워크 주소는 단축할 수 없습니다.',
@@ -166,8 +193,61 @@ describe('ShortUrls API (e2e)', () => {
     });
   });
 
+  describe('GET /short-urls', () => {
+    it('토큰 없이 요청하면 401 반환 테스트', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/short-urls')
+        .expect(401);
+
+      expect(response.body.statusCode).toBe(401);
+      expect(prisma.shortUrl.findMany).not.toHaveBeenCalled();
+    });
+
+    it('로그인한 사용자의 단축 URL 목록 반환', async () => {
+      prisma.shortUrl.findMany.mockResolvedValue([
+        {
+          id: 'short-1',
+          shortCode: 'abc2345',
+          originalUrl: 'https://example.com',
+          title: '예제',
+          isActive: true,
+          expiresAt: null,
+          clickCount: 5n,
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+      ]);
+
+      const response = await request(app.getHttpServer())
+        .get('/short-urls')
+        .set('Authorization', 'Bearer test-token')
+        .expect(200);
+
+      expect(prisma.shortUrl.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user-1' },
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
+      expect(response.body).toEqual([
+        {
+          id: 'short-1',
+          shortCode: 'abc2345',
+          shortUrl: 'http://localhost:3000/abc2345',
+          originalUrl: 'https://example.com',
+          title: '예제',
+          isActive: true,
+          expiresAt: null,
+          clickCount: '5',
+          createdAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+          updatedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+        },
+      ]);
+    });
+  });
+
   describe('GET /:shortCode', () => {
-    it('원본 URL로 302 리다이렉트하고 클릭을 기록한다', async () => {
+    it('원본 URL로 302 리다이렉트 클릭 기록 테스트', async () => {
       prisma.shortUrl.findUnique.mockResolvedValue({
         id: 'short-1',
         shortCode: 'abc2345',
@@ -200,7 +280,7 @@ describe('ShortUrls API (e2e)', () => {
       });
     });
 
-    it('없는 shortCode면 404를 반환한다', async () => {
+    it('없는 shortCode일 경우 404 반환 테스트', async () => {
       prisma.shortUrl.findUnique.mockResolvedValue(null);
 
       const response = await request(app.getHttpServer())
@@ -211,7 +291,7 @@ describe('ShortUrls API (e2e)', () => {
       expect(prisma.click.create).not.toHaveBeenCalled();
     });
 
-    it('만료된 shortCode면 410을 반환한다', async () => {
+    it('만료된 shortCode일 경우 410 반환 테스트', async () => {
       prisma.shortUrl.findUnique.mockResolvedValue({
         id: 'short-1',
         shortCode: 'expired',

@@ -62,7 +62,7 @@ describe('Users API (e2e)', () => {
   });
 
   describe('GET /users', () => {
-    it('사용자 목록을 반환한다', async () => {
+    it('사용자 목록 반환 테스트', async () => {
       const users = [
         {
           id: 'user-1',
@@ -89,7 +89,7 @@ describe('Users API (e2e)', () => {
       name: '홍길동',
     };
 
-    it('회원가입에 성공하면 201/200과 사용자 정보를 반환한다', async () => {
+    it('회원가입 성공 시 201/200과 사용자 정보 반환 테스트', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue({
         id: 'user-1',
@@ -112,7 +112,7 @@ describe('Users API (e2e)', () => {
       expect(response.body).not.toHaveProperty('passwordHash');
     });
 
-    it('이미 사용 중인 이메일이면 409를 반환한다', async () => {
+    it('이미 사용 중인 이메일일 경우 409 반환 테스트', async () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
         email: createUserDto.email,
@@ -129,7 +129,7 @@ describe('Users API (e2e)', () => {
       });
     });
 
-    it('비밀번호가 짧으면 400을 반환한다', async () => {
+    it('비밀번호가 짧을 경우 400 반환 테스트', async () => {
       const response = await request(app.getHttpServer())
         .post('/users/signup')
         .send({

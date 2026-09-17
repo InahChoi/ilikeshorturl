@@ -35,7 +35,7 @@ describe('App (e2e)', () => {
     await app.close();
   });
 
-  it('애플리케이션이 정상적으로 부팅된다', async () => {
+  it('애플리케이션 부팅 테스트', async () => {
     // * AppController가 없으므로 /users로 헬스 체크
     await request(app.getHttpServer()).get('/users').expect(200);
   });

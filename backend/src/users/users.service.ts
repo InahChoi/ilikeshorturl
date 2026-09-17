@@ -21,7 +21,7 @@ export class UsersService {
 
   // * users 테이블에서 모든 사용자를 조회
   async findAll() {
-    return this.prisma.user.findMany({
+    return await this.prisma.user.findMany({
       select: {
         id: true,
         email: true,
@@ -34,14 +34,14 @@ export class UsersService {
 
   // * 이메일로 사용자 조회 (로그인 시 passwordHash 비교용)
   async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
+    return await this.prisma.user.findUnique({
       where: { email },
     });
   }
 
   // * id로 사용자 조회 (JWT 검증 후 현재 사용자 확인용)
   async findById(id: string) {
-    return this.prisma.user.findUnique({
+    return await this.prisma.user.findUnique({
       where: { id },
       select: {
         id: true,
@@ -71,7 +71,7 @@ export class UsersService {
     );
 
     // * users 테이블에 새 사용자 생성
-    return this.prisma.user.create({
+    return await this.prisma.user.create({
       data: {
         email: createUserDto.email,
         passwordHash,

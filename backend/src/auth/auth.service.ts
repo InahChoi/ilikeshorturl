@@ -68,4 +68,16 @@ export class AuthService {
       },
     };
   }
+
+  // * 현재 로그인 사용자 조회 (JWT userId 기준)
+  async getMe(userId: string) {
+    const user = await this.usersService.findById(userId);
+
+    // * 토큰은 유효하지만 사용자가 삭제된 경우
+    if (!user) {
+      throw new UnauthorizedException('인증이 필요합니다.');
+    }
+
+    return user;
+  }
 }

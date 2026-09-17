@@ -1,5 +1,6 @@
 // * NestJS e2e 테스트 모듈 기능
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import request from 'supertest';
@@ -18,6 +19,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 
 describe('Auth API (e2e)', () => {
   let app: INestApplication<App>;
+  let jwtService: JwtService;
 
   // * Prisma user 모델 mock
   const prisma = {
@@ -39,6 +41,7 @@ describe('Auth API (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    jwtService = moduleFixture.get(JwtService);
 
     // * main.ts와 동일한 ValidationPipe / Filter 적용
     app.useGlobalPipes(
@@ -68,7 +71,7 @@ describe('Auth API (e2e)', () => {
       password: 'password123',
     };
 
-    it('로그인에 성공하면 accessToken과 user를 반환한다', async () => {
+    it('로그인 성공 시 accessToken과 user 반환 테스트', async () => {
       const passwordHash = await bcrypt.hash(loginDto.password, 10);
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
@@ -93,7 +96,7 @@ describe('Auth API (e2e)', () => {
       expect(response.body.accessToken.length).toBeGreaterThan(10);
     });
 
-    it('비밀번호가 틀리면 401을 반환한다', async () => {
+    it('비밀번호가 틀릴 경우 401 반환 테스트', async () => {
       const passwordHash = await bcrypt.hash('other-password', 10);
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
@@ -113,12 +116,78 @@ describe('Auth API (e2e)', () => {
       });
     });
 
-    it('사용자가 없으면 401을 반환한다', async () => {
+    it('사용자가 없을 경우 401 반환 테스트', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       const response = await request(app.getHttpServer())
         .post('/auth/login')
         .send(loginDto)
+        .expect(401);
+
+      expect(response.body.statusCode).toBe(401);
+    });
+  });
+
+  describe('GET /auth/me', () => {
+    const meUser = {
+      id: 'user-1',
+      email: 'user@example.com',
+      name: '홍길동',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+
+    it('토큰 없이 요청 시 401 반환 테스트', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .expect(401);
+
+      expect(response.body.statusCode).toBe(401);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('현재 로그인 사용자 정보 반환 테스트', async () => {
+      const accessToken = await jwtService.signAsync({
+        sub: meUser.id,
+        email: meUser.email,
+      });
+      prisma.user.findUnique.mockResolvedValue(meUser);
+
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { id: meUser.id },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      expect(response.body).toEqual({
+        id: meUser.id,
+        email: meUser.email,
+        name: meUser.name,
+        createdAt: meUser.createdAt.toISOString(),
+        updatedAt: meUser.updatedAt.toISOString(),
+      });
+      expect(response.body).not.toHaveProperty('passwordHash');
+    });
+
+    it('토큰은 유효하지만 사용자가 없을 경우 401 반환 테스트', async () => {
+      const accessToken = await jwtService.signAsync({
+        sub: 'deleted-user',
+        email: 'gone@example.com',
+      });
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(401);
 
       expect(response.body.statusCode).toBe(401);

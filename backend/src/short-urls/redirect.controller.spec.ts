@@ -39,7 +39,7 @@ describe('RedirectController', () => {
   });
 
   describe('GET /:shortCode', () => {
-    it('클릭 메타와 함께 resolveAndTrack을 호출하고 302 리다이렉트 정보를 반환한다', async () => {
+    it('클릭 메타와 함께 resolveAndTrack을 호출하고 302 리다이렉트 정보를 반환', async () => {
       shortUrlsService.resolveAndTrack.mockResolvedValue(
         'https://example.com/destination',
       );
@@ -65,7 +65,7 @@ describe('RedirectController', () => {
       });
     });
 
-    it('예약된 경로면 NotFoundException을 던진다', async () => {
+    it('예약된 경로면 NotFoundException을 던짐', async () => {
       const request = {
         ip: '127.0.0.1',
         headers: {},

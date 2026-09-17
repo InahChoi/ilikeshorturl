@@ -16,7 +16,7 @@ export class TermsService {
 
   // * 활성화된 약관 목록 조회 (타입별 최신 publishedAt 우선)
   async findAll() {
-    return this.prisma.term.findMany({
+    return await this.prisma.term.findMany({
       where: { isActive: true },
       orderBy: [{ type: 'asc' }, { publishedAt: 'desc' }],
       select: {
