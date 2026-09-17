@@ -17,6 +17,28 @@ alwaysApply: false
 /* temporary fix */
 ```
 
+## Async / Await
+
+Promise를 반환하는 메서드는 `async` + `await`를 함께 쓴다. `async`만 두고 `return this.service.method()` 형태는 피한다.
+
+```typescript
+// ✅ GOOD
+async findMine(@CurrentUser() user: AuthUser) {
+  return await this.shortUrlsService.findAllByUserId(user.userId);
+}
+
+// ❌ BAD
+async findMine(@CurrentUser() user: AuthUser) {
+  return this.shortUrlsService.findAllByUserId(user.userId);
+}
+```
+
+## Typing / CI source of truth
+
+- Service public 메서드는 `Promise<...>` 반환 타입을 명시한다 (Prisma 추론에만 의존하지 않음).
+- Controller는 `ShortUrlsService`를 그대로 생성자 주입한다. IDE-only lint 우회용 구조적 인터페이스는 쓰지 않는다.
+- 품질 기준은 IDE가 아니라 CI다: `npm run typecheck` + `npm run lint` (+ test).
+
 ## API + Tests together
 
 Controller에 엔드포인트를 추가하면:

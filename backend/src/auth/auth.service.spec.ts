@@ -23,6 +23,7 @@ describe('AuthService', () => {
   // * UsersService / JwtService mock
   const usersService = {
     findByEmail: jest.fn(),
+    findById: jest.fn(),
   };
   const jwtService = {
     signAsync: jest.fn(),
@@ -106,6 +107,31 @@ describe('AuthService', () => {
         UnauthorizedException,
       );
       expect(jwtService.signAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getMe', () => {
+    const meUser = {
+      id: 'user-1',
+      email: 'user@example.com',
+      name: '홍길동',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+
+    it('현재 사용자 정보를 반환한다', async () => {
+      usersService.findById.mockResolvedValue(meUser);
+
+      await expect(service.getMe('user-1')).resolves.toEqual(meUser);
+      expect(usersService.findById).toHaveBeenCalledWith('user-1');
+    });
+
+    it('사용자가 없으면 UnauthorizedException을 던진다', async () => {
+      usersService.findById.mockResolvedValue(null);
+
+      await expect(service.getMe('user-1')).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
     });
   });
 });

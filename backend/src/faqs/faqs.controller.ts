@@ -14,6 +14,6 @@ export class FaqsController {
   @Get()
   async findAll(@Query('category') category?: string) {
     // * GET /faqs — 활성화된 FAQ 목록 조회 (category 쿼리 선택)
-    return this.faqsService.findAll(category);
+    return await this.faqsService.findAll(category);
   }
 }

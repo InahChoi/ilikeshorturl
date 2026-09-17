@@ -25,6 +25,12 @@ import { AuthService } from './auth.service';
 // * JWT 검증 Strategy
 import { JwtStrategy } from './strategies/jwt.strategy';
 
+// * JWT 필수 Guard
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+
+// * JWT 선택 Guard
+import { OptionalJwtAuthGuard } from './guards/optional-jwt-auth.guard';
+
 @Module({
   imports: [
     // * AuthService에서 UsersService를 사용할 수 있도록 연결
@@ -51,10 +57,17 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   // * AuthController를 AuthModule에서 사용할 수 있도록 등록
   controllers: [AuthController],
 
-  // * AuthService, JwtStrategy를 AuthModule에서 사용할 수 있도록 등록
-  providers: [AuthService, JwtStrategy],
+  // * AuthService, JwtStrategy, Guard를 AuthModule에서 사용할 수 있도록 등록
+  providers: [AuthService, JwtStrategy, JwtAuthGuard, OptionalJwtAuthGuard],
 
-  // * 다른 Module에서도 JwtAuthGuard / JwtModule을 사용할 수 있도록 공개
-  exports: [AuthService, JwtModule, PassportModule],
+  // * 다른 Module에서도 JWT 인증을 사용할 수 있도록 공개
+  exports: [
+    AuthService,
+    JwtModule,
+    PassportModule,
+    JwtStrategy,
+    JwtAuthGuard,
+    OptionalJwtAuthGuard,
+  ],
 })
 export class AuthModule {}

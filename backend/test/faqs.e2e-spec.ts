@@ -61,7 +61,7 @@ describe('Faqs API (e2e)', () => {
   });
 
   describe('GET /faqs', () => {
-    it('활성 FAQ 목록을 반환한다', async () => {
+    it('활성 FAQ 목록 반환 테스트', async () => {
       const faqs = [
         {
           id: 'faq-1',
@@ -81,7 +81,7 @@ describe('Faqs API (e2e)', () => {
       expect(response.body).toEqual(faqs);
     });
 
-    it('category 쿼리로 필터링한다', async () => {
+    it('category 쿼리 필터링 테스트', async () => {
       prisma.faq.findMany.mockResolvedValue([]);
 
       await request(app.getHttpServer())

@@ -17,13 +17,13 @@ export class TermsController {
   @Get()
   async findAll() {
     // * GET /terms — 활성화된 약관 목록 조회
-    return this.termsService.findAll();
+    return await this.termsService.findAll();
   }
 
   @Get(':type')
   async findLatestByType(@Param('type') type: string) {
     // * GET /terms/:type — 타입별 최신 활성 약관 조회
-    return this.termsService.findLatestByType(this.parseTermType(type));
+    return await this.termsService.findLatestByType(this.parseTermType(type));
   }
 
   // * path param을 TermType enum으로 변환

@@ -40,7 +40,7 @@ describe('TermsController', () => {
   });
 
   describe('GET /terms', () => {
-    it('TermsService.findAll을 호출한다', async () => {
+    it('TermsService.findAll을 호출', async () => {
       const terms = [{ id: 'term-1', type: TermType.TERMS_OF_SERVICE }];
       termsService.findAll.mockResolvedValue(terms);
 
@@ -50,7 +50,7 @@ describe('TermsController', () => {
   });
 
   describe('GET /terms/:type', () => {
-    it('유효한 type이면 findLatestByType을 호출한다', async () => {
+    it('유효한 type이면 findLatestByType을 호출', async () => {
       const term = { id: 'term-1', type: TermType.PRIVACY_POLICY };
       termsService.findLatestByType.mockResolvedValue(term);
 
@@ -62,7 +62,7 @@ describe('TermsController', () => {
       );
     });
 
-    it('잘못된 type이면 BadRequestException을 던진다', async () => {
+    it('잘못된 type이면 BadRequestException을 던짐', async () => {
       await expect(
         controller.findLatestByType('invalid'),
       ).rejects.toBeInstanceOf(BadRequestException);

@@ -30,6 +30,7 @@ describe('ShortUrlsService', () => {
     shortUrl: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       update: jest.fn(),
     },
     click: {
@@ -82,7 +83,7 @@ describe('ShortUrlsService', () => {
       title: '예제',
     };
 
-    it('로그인 없이 단축 URL을 생성한다', async () => {
+    it('로그인 없이 단축 URL을 생성', async () => {
       (generateShortCode as jest.Mock).mockReturnValue('abc2345');
       prisma.shortUrl.create.mockResolvedValue({
         id: 'short-1',
@@ -122,7 +123,7 @@ describe('ShortUrlsService', () => {
       });
     });
 
-    it('shortCode가 충돌하면 재시도한다', async () => {
+    it('shortCode가 충돌하면 재시도', async () => {
       (generateShortCode as jest.Mock)
         .mockReturnValueOnce('dupcode')
         .mockReturnValueOnce('newcode');
@@ -154,6 +155,85 @@ describe('ShortUrlsService', () => {
       expect(result.shortCode).toBe('newcode');
       expect(result.shortUrl).toBe('http://localhost:3000/newcode');
     });
+
+    it('로그인 사용자로 생성하면 userId를 저장', async () => {
+      (generateShortCode as jest.Mock).mockReturnValue('abc2345');
+      prisma.shortUrl.create.mockResolvedValue({
+        id: 'short-1',
+        shortCode: 'abc2345',
+        originalUrl: createShortUrlDto.originalUrl,
+        title: createShortUrlDto.title,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+
+      await service.create(createShortUrlDto, 'user-1');
+
+      expect(prisma.shortUrl.create).toHaveBeenCalledWith({
+        data: {
+          shortCode: 'abc2345',
+          originalUrl: createShortUrlDto.originalUrl,
+          title: createShortUrlDto.title,
+          userId: 'user-1',
+        },
+        select: {
+          id: true,
+          shortCode: true,
+          originalUrl: true,
+          title: true,
+          createdAt: true,
+        },
+      });
+    });
+  });
+
+  describe('findAllByUserId', () => {
+    it('해당 사용자의 단축 URL 목록을 반환한다', async () => {
+      prisma.shortUrl.findMany.mockResolvedValue([
+        {
+          id: 'short-1',
+          shortCode: 'abc2345',
+          originalUrl: 'https://example.com',
+          title: '예제',
+          isActive: true,
+          expiresAt: null,
+          clickCount: 12n,
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+      ]);
+
+      const result = await service.findAllByUserId('user-1');
+
+      expect(prisma.shortUrl.findMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1' },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          shortCode: true,
+          originalUrl: true,
+          title: true,
+          isActive: true,
+          expiresAt: true,
+          clickCount: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      expect(result).toEqual([
+        {
+          id: 'short-1',
+          shortCode: 'abc2345',
+          shortUrl: 'http://localhost:3000/abc2345',
+          originalUrl: 'https://example.com',
+          title: '예제',
+          isActive: true,
+          expiresAt: null,
+          clickCount: '12',
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+      ]);
+    });
   });
 
   describe('resolveAndTrack', () => {
@@ -171,7 +251,7 @@ describe('ShortUrlsService', () => {
       expiresAt: null,
     };
 
-    it('클릭을 기록하고 원본 URL을 반환한다', async () => {
+    it('클릭을 기록하고 원본 URL을 반환', async () => {
       prisma.shortUrl.findUnique.mockResolvedValue(activeShortUrl);
       prisma.click.create.mockResolvedValue({ id: 'click-1' });
       prisma.shortUrl.update.mockResolvedValue({
@@ -200,7 +280,7 @@ describe('ShortUrlsService', () => {
       expect(prisma.$transaction).toHaveBeenCalled();
     });
 
-    it('없는 shortCode면 NotFoundException을 던진다', async () => {
+    it('없는 shortCode면 NotFoundException을 던짐', async () => {
       prisma.shortUrl.findUnique.mockResolvedValue(null);
 
       await expect(
@@ -209,7 +289,7 @@ describe('ShortUrlsService', () => {
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
-    it('비활성 shortCode면 NotFoundException을 던진다', async () => {
+    it('비활성 shortCode면 NotFoundException을 던짐', async () => {
       prisma.shortUrl.findUnique.mockResolvedValue({
         ...activeShortUrl,
         isActive: false,
@@ -220,7 +300,7 @@ describe('ShortUrlsService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('만료된 shortCode면 GoneException을 던진다', async () => {
+    it('만료된 shortCode면 GoneException을 던짐', async () => {
       prisma.shortUrl.findUnique.mockResolvedValue({
         ...activeShortUrl,
         expiresAt: new Date('2020-01-01T00:00:00.000Z'),
