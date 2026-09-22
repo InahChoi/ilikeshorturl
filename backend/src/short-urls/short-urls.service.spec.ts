@@ -1,5 +1,9 @@
 // * NestJS 테스트 모듈 기능
-import { GoneException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  GoneException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 
@@ -30,8 +34,10 @@ describe('ShortUrlsService', () => {
     shortUrl: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
+      deleteMany: jest.fn(),
     },
     click: {
       create: jest.fn(),
@@ -233,6 +239,145 @@ describe('ShortUrlsService', () => {
           updatedAt: new Date('2026-01-01T00:00:00.000Z'),
         },
       ]);
+    });
+  });
+
+  describe('findOneByUserId', () => {
+    const owned = {
+      id: 'short-1',
+      shortCode: 'abc2345',
+      originalUrl: 'https://example.com',
+      title: '예제',
+      isActive: true,
+      expiresAt: null,
+      clickCount: 3n,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+
+    it('소유한 단축 URL 상세를 반환한다', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue(owned);
+
+      await expect(
+        service.findOneByUserId('short-1', 'user-1'),
+      ).resolves.toEqual({
+        ...owned,
+        shortUrl: 'http://localhost:3000/abc2345',
+        clickCount: '3',
+      });
+      expect(prisma.shortUrl.findFirst).toHaveBeenCalledWith({
+        where: { id: 'short-1', userId: 'user-1' },
+        select: {
+          id: true,
+          shortCode: true,
+          originalUrl: true,
+          title: true,
+          isActive: true,
+          expiresAt: true,
+          clickCount: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    });
+
+    it('없거나 소유하지 않으면 NotFoundException을 던진다', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.findOneByUserId('short-1', 'user-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('updateByUserId', () => {
+    const owned = {
+      id: 'short-1',
+      shortCode: 'abc2345',
+      originalUrl: 'https://example.com',
+      title: '예제',
+      isActive: true,
+      expiresAt: null,
+      clickCount: 3n,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+
+    it('title, expiresAt, isActive를 수정한다', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue({ id: 'short-1' });
+      prisma.shortUrl.update.mockResolvedValue({
+        ...owned,
+        title: '새 제목',
+        isActive: false,
+        expiresAt: new Date('2027-01-01T00:00:00.000Z'),
+      });
+
+      const result = await service.updateByUserId('short-1', 'user-1', {
+        title: '새 제목',
+        isActive: false,
+        expiresAt: '2027-01-01T00:00:00.000Z',
+      });
+
+      expect(prisma.shortUrl.update).toHaveBeenCalledWith({
+        where: { id: 'short-1' },
+        data: {
+          title: '새 제목',
+          isActive: false,
+          expiresAt: new Date('2027-01-01T00:00:00.000Z'),
+        },
+        select: {
+          id: true,
+          shortCode: true,
+          originalUrl: true,
+          title: true,
+          isActive: true,
+          expiresAt: true,
+          clickCount: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      expect(result.title).toBe('새 제목');
+      expect(result.isActive).toBe(false);
+    });
+
+    it('수정할 필드가 없으면 BadRequestException을 던진다', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue({ id: 'short-1' });
+
+      await expect(
+        service.updateByUserId('short-1', 'user-1', {}),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.shortUrl.update).not.toHaveBeenCalled();
+    });
+
+    it('없거나 소유하지 않으면 NotFoundException을 던진다', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.updateByUserId('short-1', 'user-1', { title: 'x' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.shortUrl.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteByUserId', () => {
+    it('소유한 단축 URL을 삭제한다', async () => {
+      prisma.shortUrl.deleteMany.mockResolvedValue({ count: 1 });
+
+      await expect(
+        service.deleteByUserId('short-1', 'user-1'),
+      ).resolves.toBeUndefined();
+      expect(prisma.shortUrl.deleteMany).toHaveBeenCalledWith({
+        where: { id: 'short-1', userId: 'user-1' },
+      });
+    });
+
+    it('없거나 소유하지 않으면 NotFoundException을 던진다', async () => {
+      prisma.shortUrl.deleteMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.deleteByUserId('short-1', 'user-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 

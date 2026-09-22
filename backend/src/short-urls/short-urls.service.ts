@@ -1,5 +1,10 @@
 // * NestJS에서 Service를 만들기 위한 기능
-import { GoneException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  GoneException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 // * ConfigService로 APP_BASE_URL에 접근
 import { ConfigService } from '@nestjs/config';
@@ -19,10 +24,13 @@ import { UrlSafetyService } from '../url-safety/url-safety.service';
 // * 단축 URL 생성 요청 body 형식
 import { CreateShortUrlDto } from './dto/create-short-url.dto';
 
+// * 단축 URL 수정 요청 body 형식
+import { UpdateShortUrlDto } from './dto/update-short-url.dto';
+
 // * 클릭 메타데이터 형식
 import { ClickMeta } from './interfaces/click-meta.interface';
 
-// * 대시보드 목록 응답 형식
+// * 대시보드 목록/상세 응답 형식
 import { ShortUrlListItem } from './interfaces/short-url-list-item.interface';
 
 // * shortCode 생성 유틸
@@ -30,6 +38,19 @@ import { generateShortCode } from './utils/generate-short-code.util';
 
 // * shortCode 충돌 시 재시도 횟수
 const SHORT_CODE_MAX_RETRIES = 5;
+
+// * 대시보드 조회에 공통으로 쓰는 select
+const DASHBOARD_SHORT_URL_SELECT = {
+  id: true,
+  shortCode: true,
+  originalUrl: true,
+  title: true,
+  isActive: true,
+  expiresAt: true,
+  clickCount: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 @Injectable()
 export class ShortUrlsService {
@@ -70,32 +91,78 @@ export class ShortUrlsService {
     const shortUrls = await this.prisma.shortUrl.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        shortCode: true,
-        originalUrl: true,
-        title: true,
-        isActive: true,
-        expiresAt: true,
-        clickCount: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: DASHBOARD_SHORT_URL_SELECT,
     });
 
-    // * BigInt clickCount를 JSON 친화적인 string으로 변환하고 shortUrl 포함
-    return shortUrls.map((shortUrl) => ({
-      id: shortUrl.id,
-      shortCode: shortUrl.shortCode,
-      shortUrl: this.buildShortUrl(shortUrl.shortCode),
-      originalUrl: shortUrl.originalUrl,
-      title: shortUrl.title,
-      isActive: shortUrl.isActive,
-      expiresAt: shortUrl.expiresAt,
-      clickCount: shortUrl.clickCount.toString(),
-      createdAt: shortUrl.createdAt,
-      updatedAt: shortUrl.updatedAt,
-    }));
+    return shortUrls.map((shortUrl) => this.toDashboardItem(shortUrl));
+  }
+
+  // * 로그인한 사용자의 단축 URL 상세 조회
+  async findOneByUserId(id: string, userId: string): Promise<ShortUrlListItem> {
+    const shortUrl = await this.prisma.shortUrl.findFirst({
+      where: { id, userId },
+      select: DASHBOARD_SHORT_URL_SELECT,
+    });
+
+    if (!shortUrl) {
+      throw new NotFoundException('단축 URL을 찾을 수 없습니다.');
+    }
+
+    return this.toDashboardItem(shortUrl);
+  }
+
+  // * 로그인한 사용자의 단축 URL 수정 (title, expiresAt, isActive)
+  async updateByUserId(
+    id: string,
+    userId: string,
+    updateShortUrlDto: UpdateShortUrlDto,
+  ): Promise<ShortUrlListItem> {
+    // * 소유권 확인 (없으면 404 — 타인 리소스 존재 여부도 노출하지 않음)
+    await this.findOwnedOrFail(id, userId);
+
+    if (
+      updateShortUrlDto.title === undefined &&
+      updateShortUrlDto.expiresAt === undefined &&
+      updateShortUrlDto.isActive === undefined
+    ) {
+      throw new BadRequestException('수정할 필드가 없습니다.');
+    }
+
+    const data: Prisma.ShortUrlUpdateInput = {};
+
+    if (updateShortUrlDto.title !== undefined) {
+      data.title = updateShortUrlDto.title;
+    }
+
+    if (updateShortUrlDto.expiresAt !== undefined) {
+      data.expiresAt =
+        updateShortUrlDto.expiresAt === null
+          ? null
+          : new Date(updateShortUrlDto.expiresAt);
+    }
+
+    if (updateShortUrlDto.isActive !== undefined) {
+      data.isActive = updateShortUrlDto.isActive;
+    }
+
+    const shortUrl = await this.prisma.shortUrl.update({
+      where: { id },
+      data,
+      select: DASHBOARD_SHORT_URL_SELECT,
+    });
+
+    return this.toDashboardItem(shortUrl);
+  }
+
+  // * 로그인한 사용자의 단축 URL 삭제 (clicks는 DB Cascade)
+  async deleteByUserId(id: string, userId: string): Promise<void> {
+    const result = await this.prisma.shortUrl.deleteMany({
+      where: { id, userId },
+    });
+
+    if (result.count === 0) {
+      throw new NotFoundException('단축 URL을 찾을 수 없습니다.');
+    }
   }
 
   // * shortCode로 원본 URL을 찾고 클릭을 기록한 뒤 리다이렉트 대상 URL을 반환
@@ -134,6 +201,46 @@ export class ShortUrlsService {
     ]);
 
     return shortUrl.originalUrl;
+  }
+
+  // * 소유한 단축 URL이 없으면 404
+  private async findOwnedOrFail(id: string, userId: string) {
+    const shortUrl = await this.prisma.shortUrl.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    });
+
+    if (!shortUrl) {
+      throw new NotFoundException('단축 URL을 찾을 수 없습니다.');
+    }
+
+    return shortUrl;
+  }
+
+  // * DB 행을 대시보드 응답 형식으로 변환
+  private toDashboardItem(shortUrl: {
+    id: string;
+    shortCode: string;
+    originalUrl: string;
+    title: string | null;
+    isActive: boolean;
+    expiresAt: Date | null;
+    clickCount: bigint;
+    createdAt: Date;
+    updatedAt: Date;
+  }): ShortUrlListItem {
+    return {
+      id: shortUrl.id,
+      shortCode: shortUrl.shortCode,
+      shortUrl: this.buildShortUrl(shortUrl.shortCode),
+      originalUrl: shortUrl.originalUrl,
+      title: shortUrl.title,
+      isActive: shortUrl.isActive,
+      expiresAt: shortUrl.expiresAt,
+      clickCount: shortUrl.clickCount.toString(),
+      createdAt: shortUrl.createdAt,
+      updatedAt: shortUrl.updatedAt,
+    };
   }
 
   // * shortCode 충돌이 나면 재생성하여 저장

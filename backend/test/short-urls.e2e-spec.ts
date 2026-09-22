@@ -40,8 +40,10 @@ describe('ShortUrls API (e2e)', () => {
     shortUrl: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
+      deleteMany: jest.fn(),
     },
     click: {
       create: jest.fn(),
@@ -203,10 +205,10 @@ describe('ShortUrls API (e2e)', () => {
       expect(prisma.shortUrl.findMany).not.toHaveBeenCalled();
     });
 
-    it('로그인한 사용자의 단축 URL 목록 반환', async () => {
+    it('로그인한 사용자의 단축 URL 목록 반환 테스트', async () => {
       prisma.shortUrl.findMany.mockResolvedValue([
         {
-          id: 'short-1',
+          id: '11111111-1111-1111-1111-111111111111',
           shortCode: 'abc2345',
           originalUrl: 'https://example.com',
           title: '예제',
@@ -231,7 +233,7 @@ describe('ShortUrls API (e2e)', () => {
       );
       expect(response.body).toEqual([
         {
-          id: 'short-1',
+          id: '11111111-1111-1111-1111-111111111111',
           shortCode: 'abc2345',
           shortUrl: 'http://localhost:3000/abc2345',
           originalUrl: 'https://example.com',
@@ -243,6 +245,133 @@ describe('ShortUrls API (e2e)', () => {
           updatedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
         },
       ]);
+    });
+  });
+
+  describe('GET /short-urls/:id', () => {
+    const shortId = '11111111-1111-1111-1111-111111111111';
+
+    it('내 단축 URL 상세 반환 테스트', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue({
+        id: shortId,
+        shortCode: 'abc2345',
+        originalUrl: 'https://example.com',
+        title: '예제',
+        isActive: true,
+        expiresAt: null,
+        clickCount: 2n,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+
+      const response = await request(app.getHttpServer())
+        .get(`/short-urls/${shortId}`)
+        .set('Authorization', 'Bearer test-token')
+        .expect(200);
+
+      expect(prisma.shortUrl.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: shortId, userId: 'user-1' },
+        }),
+      );
+      expect(response.body).toMatchObject({
+        id: shortId,
+        shortCode: 'abc2345',
+        shortUrl: 'http://localhost:3000/abc2345',
+        clickCount: '2',
+      });
+    });
+
+    it('없거나 소유하지 않을 경우 404 반환 테스트', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue(null);
+
+      const response = await request(app.getHttpServer())
+        .get(`/short-urls/${shortId}`)
+        .set('Authorization', 'Bearer test-token')
+        .expect(404);
+
+      expect(response.body.statusCode).toBe(404);
+    });
+
+    it('UUID가 아닐 경우 400 반환 테스트', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/short-urls/not-a-uuid')
+        .set('Authorization', 'Bearer test-token')
+        .expect(400);
+
+      expect(response.body.statusCode).toBe(400);
+    });
+  });
+
+  describe('PATCH /short-urls/:id', () => {
+    const shortId = '11111111-1111-1111-1111-111111111111';
+
+    it('title과 isActive 수정 반환 테스트', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue({ id: shortId });
+      prisma.shortUrl.update.mockResolvedValue({
+        id: shortId,
+        shortCode: 'abc2345',
+        originalUrl: 'https://example.com',
+        title: '새 제목',
+        isActive: false,
+        expiresAt: null,
+        clickCount: 1n,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      });
+
+      const response = await request(app.getHttpServer())
+        .patch(`/short-urls/${shortId}`)
+        .set('Authorization', 'Bearer test-token')
+        .send({ title: '새 제목', isActive: false })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        id: shortId,
+        title: '새 제목',
+        isActive: false,
+      });
+    });
+
+    it('수정할 필드가 없을 경우 400 반환 테스트', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue({ id: shortId });
+
+      const response = await request(app.getHttpServer())
+        .patch(`/short-urls/${shortId}`)
+        .set('Authorization', 'Bearer test-token')
+        .send({})
+        .expect(400);
+
+      expect(response.body.statusCode).toBe(400);
+      expect(prisma.shortUrl.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('DELETE /short-urls/:id', () => {
+    const shortId = '11111111-1111-1111-1111-111111111111';
+
+    it('내 단축 URL 삭제 시 204 반환 테스트', async () => {
+      prisma.shortUrl.deleteMany.mockResolvedValue({ count: 1 });
+
+      await request(app.getHttpServer())
+        .delete(`/short-urls/${shortId}`)
+        .set('Authorization', 'Bearer test-token')
+        .expect(204);
+
+      expect(prisma.shortUrl.deleteMany).toHaveBeenCalledWith({
+        where: { id: shortId, userId: 'user-1' },
+      });
+    });
+
+    it('없거나 소유하지 않을 경우 404 반환 테스트', async () => {
+      prisma.shortUrl.deleteMany.mockResolvedValue({ count: 0 });
+
+      const response = await request(app.getHttpServer())
+        .delete(`/short-urls/${shortId}`)
+        .set('Authorization', 'Bearer test-token')
+        .expect(404);
+
+      expect(response.body.statusCode).toBe(404);
     });
   });
 
