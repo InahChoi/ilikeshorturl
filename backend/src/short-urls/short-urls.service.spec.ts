@@ -28,7 +28,6 @@ jest.mock('./utils/generate-short-code.util', () => ({
 
 describe('ShortUrlsService', () => {
   let service: ShortUrlsService;
-
   // * Prisma / Config mock
   const prisma = {
     shortUrl: {
@@ -41,6 +40,7 @@ describe('ShortUrlsService', () => {
     },
     click: {
       create: jest.fn(),
+      findMany: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -378,6 +378,74 @@ describe('ShortUrlsService', () => {
       await expect(
         service.deleteByUserId('short-1', 'user-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('getStatsByUserId', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-01-10T12:00:00.000Z'));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('일별·referer·userAgent 집계를 반환한다', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue({ id: 'short-1' });
+      prisma.click.findMany.mockResolvedValue([
+        {
+          clickedAt: new Date('2026-01-09T10:00:00.000Z'),
+          referer: 'https://a.com',
+          userAgent: 'UA-1',
+        },
+        {
+          clickedAt: new Date('2026-01-09T11:00:00.000Z'),
+          referer: 'https://a.com',
+          userAgent: 'UA-2',
+        },
+        {
+          clickedAt: new Date('2026-01-10T09:00:00.000Z'),
+          referer: null,
+          userAgent: 'UA-1',
+        },
+      ]);
+
+      const result = await service.getStatsByUserId('short-1', 'user-1', 2);
+
+      expect(prisma.click.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            shortUrlId: 'short-1',
+            clickedAt: {
+              gte: new Date('2026-01-09T00:00:00.000Z'),
+              lte: new Date('2026-01-10T12:00:00.000Z'),
+            },
+          },
+        }),
+      );
+      expect(result.totalClicks).toBe(3);
+      expect(result.daily).toEqual([
+        { date: '2026-01-09', count: 2 },
+        { date: '2026-01-10', count: 1 },
+      ]);
+      expect(result.topReferers).toEqual([
+        { value: 'https://a.com', count: 2 },
+        { value: null, count: 1 },
+      ]);
+      expect(result.topUserAgents).toEqual([
+        { value: 'UA-1', count: 2 },
+        { value: 'UA-2', count: 1 },
+      ]);
+    });
+
+    it('없거나 소유하지 않으면 NotFoundException을 던진다', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getStatsByUserId('short-1', 'user-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.click.findMany).not.toHaveBeenCalled();
     });
   });
 

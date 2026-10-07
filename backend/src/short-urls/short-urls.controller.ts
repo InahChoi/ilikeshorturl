@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -31,8 +32,14 @@ import { CreateShortUrlDto } from './dto/create-short-url.dto';
 // * 단축 URL 수정 요청 body 형식
 import { UpdateShortUrlDto } from './dto/update-short-url.dto';
 
+// * 클릭 통계 조회 쿼리
+import { ShortUrlStatsQueryDto } from './dto/short-url-stats-query.dto';
+
 // * 대시보드 목록/상세 응답 형식
 import type { ShortUrlListItem } from './interfaces/short-url-list-item.interface';
+
+// * 클릭 통계 응답 형식
+import type { ShortUrlStats } from './interfaces/short-url-stats.interface';
 
 // * 단축 URL 관련 DB 작업을 담당하는 Service
 import { ShortUrlsService } from './short-urls.service';
@@ -49,6 +56,21 @@ export class ShortUrlsController {
   async findMine(@CurrentUser() user: AuthUser): Promise<ShortUrlListItem[]> {
     // * GET /short-urls — 로그인한 사용자의 단축 URL 목록 (대시보드)
     return await this.shortUrlsService.findAllByUserId(user.userId);
+  }
+
+  @Get(':id/stats')
+  @UseGuards(JwtAuthGuard)
+  async getStats(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: ShortUrlStatsQueryDto,
+    @CurrentUser() user: AuthUser,
+  ): Promise<ShortUrlStats> {
+    // * GET /short-urls/:id/stats — 클릭 일별·referer·UA 집계
+    return await this.shortUrlsService.getStatsByUserId(
+      id,
+      user.userId,
+      query.days,
+    );
   }
 
   @Get(':id')

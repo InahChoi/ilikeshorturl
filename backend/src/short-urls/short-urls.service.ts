@@ -33,11 +33,25 @@ import { ClickMeta } from './interfaces/click-meta.interface';
 // * 대시보드 목록/상세 응답 형식
 import { ShortUrlListItem } from './interfaces/short-url-list-item.interface';
 
+// * 클릭 통계 응답 형식
+import {
+  DailyClickCount,
+  NamedClickCount,
+  ShortUrlStats,
+} from './interfaces/short-url-stats.interface';
+
 // * shortCode 생성 유틸
 import { generateShortCode } from './utils/generate-short-code.util';
 
 // * shortCode 충돌 시 재시도 횟수
 const SHORT_CODE_MAX_RETRIES = 5;
+
+// * 통계 조회 기본/최대 일수
+const STATS_DEFAULT_DAYS = 30;
+const STATS_MAX_DAYS = 90;
+
+// * referer / userAgent 상위 N개
+const STATS_TOP_LIMIT = 10;
 
 // * 대시보드 조회에 공통으로 쓰는 select
 const DASHBOARD_SHORT_URL_SELECT = {
@@ -165,6 +179,54 @@ export class ShortUrlsService {
     }
   }
 
+  // * 로그인한 사용자의 단축 URL 클릭 통계 (일별·referer·UA)
+  async getStatsByUserId(
+    id: string,
+    userId: string,
+    days = STATS_DEFAULT_DAYS,
+  ): Promise<ShortUrlStats> {
+    await this.findOwnedOrFail(id, userId);
+
+    const safeDays = Math.min(Math.max(days, 1), STATS_MAX_DAYS);
+    const to = new Date();
+    const from = new Date(to);
+    from.setUTCDate(from.getUTCDate() - (safeDays - 1));
+    from.setUTCHours(0, 0, 0, 0);
+
+    const clicks = await this.prisma.click.findMany({
+      where: {
+        shortUrlId: id,
+        clickedAt: {
+          gte: from,
+          lte: to,
+        },
+      },
+      select: {
+        clickedAt: true,
+        referer: true,
+        userAgent: true,
+      },
+      orderBy: { clickedAt: 'asc' },
+    });
+
+    return {
+      shortUrlId: id,
+      days: safeDays,
+      from,
+      to,
+      totalClicks: clicks.length,
+      daily: this.buildDailyCounts(clicks, from, to),
+      topReferers: this.buildTopCounts(
+        clicks.map((click) => click.referer),
+        STATS_TOP_LIMIT,
+      ),
+      topUserAgents: this.buildTopCounts(
+        clicks.map((click) => click.userAgent),
+        STATS_TOP_LIMIT,
+      ),
+    };
+  }
+
   // * shortCode로 원본 URL을 찾고 클릭을 기록한 뒤 리다이렉트 대상 URL을 반환
   async resolveAndTrack(shortCode: string, clickMeta: ClickMeta) {
     // * shortCode로 단축 URL 조회
@@ -215,6 +277,81 @@ export class ShortUrlsService {
     }
 
     return shortUrl;
+  }
+
+  // * 기간 내 일별 클릭 수를 UTC 날짜 기준으로 집계
+  private buildDailyCounts(
+    clicks: Array<{ clickedAt: Date }>,
+    from: Date,
+    to: Date,
+  ): DailyClickCount[] {
+    const counts = new Map<string, number>();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const fromDay = Date.UTC(
+      from.getUTCFullYear(),
+      from.getUTCMonth(),
+      from.getUTCDate(),
+    );
+    const toDay = Date.UTC(
+      to.getUTCFullYear(),
+      to.getUTCMonth(),
+      to.getUTCDate(),
+    );
+
+    for (let time = fromDay; time <= toDay; time += dayMs) {
+      counts.set(this.toUtcDateKey(new Date(time)), 0);
+    }
+
+    for (const click of clicks) {
+      const key = this.toUtcDateKey(click.clickedAt);
+      if (counts.has(key)) {
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    }
+
+    return Array.from(counts.entries()).map(([date, count]) => ({
+      date,
+      count,
+    }));
+  }
+
+  // * referer / userAgent 상위 집계 (null은 직접 유입/미상으로 포함)
+  private buildTopCounts(
+    values: Array<string | null | undefined>,
+    limit: number,
+  ): NamedClickCount[] {
+    const counts = new Map<string | null, number>();
+
+    for (const value of values) {
+      const key = value ?? null;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    return Array.from(counts.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort(
+        (a, b) => b.count - a.count || this.compareNullable(a.value, b.value),
+      )
+      .slice(0, limit);
+  }
+
+  // * UTC YYYY-MM-DD 키 생성
+  private toUtcDateKey(date: Date): string {
+    return date.toISOString().slice(0, 10);
+  }
+
+  // * null 안전 문자열 비교 (정렬 안정성)
+  private compareNullable(a: string | null, b: string | null): number {
+    if (a === b) {
+      return 0;
+    }
+    if (a === null) {
+      return 1;
+    }
+    if (b === null) {
+      return -1;
+    }
+    return a.localeCompare(b);
   }
 
   // * DB 행을 대시보드 응답 형식으로 변환

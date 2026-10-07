@@ -21,6 +21,7 @@ describe('ShortUrlsController', () => {
     findOneByUserId: jest.fn(),
     updateByUserId: jest.fn(),
     deleteByUserId: jest.fn(),
+    getStatsByUserId: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -76,6 +77,23 @@ describe('ShortUrlsController', () => {
       expect(shortUrlsService.findOneByUserId).toHaveBeenCalledWith(
         'short-1',
         'user-1',
+      );
+    });
+  });
+
+  describe('GET /short-urls/:id/stats', () => {
+    it('ShortUrlsService.getStatsByUserId에 id, userId, days를 전달한다', async () => {
+      const user = { userId: 'user-1', email: 'user@example.com' };
+      const stats = { shortUrlId: 'short-1', totalClicks: 3 };
+      shortUrlsService.getStatsByUserId.mockResolvedValue(stats);
+
+      await expect(
+        controller.getStats('short-1', { days: 7 }, user),
+      ).resolves.toEqual(stats);
+      expect(shortUrlsService.getStatsByUserId).toHaveBeenCalledWith(
+        'short-1',
+        'user-1',
+        7,
       );
     });
   });

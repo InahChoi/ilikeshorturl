@@ -47,6 +47,7 @@ describe('ShortUrls API (e2e)', () => {
     },
     click: {
       create: jest.fn(),
+      findMany: jest.fn(),
     },
     $transaction: jest.fn(),
     $connect: jest.fn(),
@@ -372,6 +373,66 @@ describe('ShortUrls API (e2e)', () => {
         .expect(404);
 
       expect(response.body.statusCode).toBe(404);
+    });
+  });
+
+  describe('GET /short-urls/:id/stats', () => {
+    const shortId = '11111111-1111-1111-1111-111111111111';
+
+    it('클릭 통계 집계 반환 테스트', async () => {
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+
+      prisma.shortUrl.findFirst.mockResolvedValue({ id: shortId });
+      prisma.click.findMany.mockResolvedValue([
+        {
+          clickedAt: now,
+          referer: 'https://google.com',
+          userAgent: 'Mozilla/5.0',
+        },
+        {
+          clickedAt: now,
+          referer: 'https://google.com',
+          userAgent: 'curl/8.0',
+        },
+      ]);
+
+      const response = await request(app.getHttpServer())
+        .get(`/short-urls/${shortId}/stats`)
+        .query({ days: 1 })
+        .set('Authorization', 'Bearer test-token')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        shortUrlId: shortId,
+        days: 1,
+        totalClicks: 2,
+        daily: [{ date: today, count: 2 }],
+        topReferers: [{ value: 'https://google.com', count: 2 }],
+      });
+      expect(response.body.topUserAgents).toHaveLength(2);
+    });
+
+    it('없거나 소유하지 않을 경우 404 반환 테스트', async () => {
+      prisma.shortUrl.findFirst.mockResolvedValue(null);
+
+      const response = await request(app.getHttpServer())
+        .get(`/short-urls/${shortId}/stats`)
+        .set('Authorization', 'Bearer test-token')
+        .expect(404);
+
+      expect(response.body.statusCode).toBe(404);
+      expect(prisma.click.findMany).not.toHaveBeenCalled();
+    });
+
+    it('days가 범위를 벗어나면 400 반환 테스트', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/short-urls/${shortId}/stats`)
+        .query({ days: 999 })
+        .set('Authorization', 'Bearer test-token')
+        .expect(400);
+
+      expect(response.body.statusCode).toBe(400);
     });
   });
 
