@@ -38,7 +38,7 @@ export default tseslint.config(
   },
   {
     // * class-validator 데코레이터는 IDE/ESLint 타입 해석에서 error 타입으로
-    // * 잡히는 경우가 있어 DTO 파일에서만 no-unsafe-call을 완화합니다.
+    // * 잡히는 경우가 있어 DTO 파일에서만 no-unsafe-call 완화
     files: ['**/*.dto.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-call': 'off',
